@@ -1,0 +1,81 @@
+<mat-drawer-container class="tasks-container" [hasBackdrop]="true">
+  <mat-drawer-content class="tasks-container__content">
+    <div class="tasks-container__header">
+      <p class="details-header">
+        {{ 'P_TASK_SCHED' | translate }}
+      </p>
+
+      <div *ngIf="isMobile" class="tasks-container__header--actions">
+        <img src='/assets/svg/filter-icon.svg' aria-hidden="false" aria-label="Filter" fontIcon="filter"
+          class="c-pointer" />
+      </div>
+    </div>
+
+    <div class="tasks-container__actions">
+
+      <div class="actions-wrapper">
+        <button mat-stroked-button color="primary" class="active task-filter-button">
+          <span class="details-description">
+            {{ 'GEN_TODAY' | translate }}
+          </span>
+        </button>
+        <button mat-stroked-button color="primary" class="task-filter-button">
+          <span class="details-description">
+            {{ 'GEN_TOMORROW' | translate }}
+          </span>
+        </button>
+        <button mat-stroked-button color="primary" class="task-filter-button">
+          <span class="details-description">
+            {{ 'GEN_COMPLETED' | translate }}
+          </span>
+        </button>
+        <button mat-stroked-button color="primary" class="task-filter-button">
+          <span class="details-description">
+            {{ 'GEN_ALL' | translate }}
+          </span>
+        </button>
+
+        <img *ngIf="!isMobile" src='/assets/svg/filter-icon.svg' aria-hidden="false" aria-label="Filter"
+          fontIcon="filter" class="c-pointer" />
+
+        <mat-form-field class="searchBox tasks-searchbox roam-field" appearance="outline">
+          <button matPrefix mat-button class="search-icon">
+            <mat-icon>search</mat-icon>
+          </button>
+          <input type="text" class="roam-text" matInput placeholder="{{ 'GEN_SEARCH' | translate }}" name="search"
+            [(ngModel)]="search">
+        </mat-form-field>
+      </div>
+
+      <button mat-button class="share-user-button" *ngIf="!isMobile">
+        <img src="/assets/svg/user-add.svg">
+        <span>Share</span>
+      </button>
+
+    </div>
+
+    <div cdkDropListGroup class="tasks-board-wrapper" *ngIf="isData" cdkDropList [cdkDropListData]="tasks" cdkDropListOrientation="horizontal" (cdkDropListDropped)="dropList($event)">
+      <app-tasks-drop-list (sidebarOpenedEmmiter)="onSidebarOpen($event)" (taksListUpdateEmmiter)="getTasks()" *ngFor="let state of tasks"
+        [state]="state" (drop)="drop($event, state)" cdkDrag [cdkDragData]="state"></app-tasks-drop-list>
+        <div class="new-task-board">
+          <button mat-icon-button (click)="isAddTaskListOpen = true" *ngIf="!isAddTaskListOpen; else addTaskList">
+            <span class="roam-title">Add new task list</span>
+            <mat-icon>add</mat-icon>
+          </button>
+          
+          <ng-template #addTaskList>
+            <div class="new-task-list">
+              <app-add-new-task (closeNewTask)="isAddTaskListOpen = false" (addNewTask)="onAddTaskList($event)"></app-add-new-task>
+            </div>
+          </ng-template>
+        </div>
+    </div>
+
+  </mat-drawer-content>
+
+  <mat-drawer class="task-details-drawer" #sidenav mode="over" [position]="detailDrawerPosition" [(opened)]="sidebarOpened" (opened)="events.push('open!')"
+    (closed)="events.push('close!')">
+    <app-task-details (closeSideNavEmitter)="sidebarOpened = false;" (deleteTaskEmitter)="getTasks()" [selectedTask]="selectedTask"></app-task-details>
+  </mat-drawer>
+
+</mat-drawer-container>

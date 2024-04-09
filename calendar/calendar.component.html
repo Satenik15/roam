@@ -1,0 +1,234 @@
+<mat-sidenav-container class="container pl-sm-20">
+  <mat-sidenav-content>
+    <div class="d-flex calendar__container">
+      <app-left-side-bar
+        [isCalendarDetails]="true"
+        [properties]="properties"
+        (expandedProperties)="onExpandProperty($event)"
+        class="right-border"
+      ></app-left-side-bar>
+
+      <div class="calendar__wrapper w-100">
+        <div class="calendar__main-tools">
+          <div class="justify-between calendar__actions">
+            <div class="d-flex gap-32">
+              <p class="details-header">{{ currentMonth | date : "MMMM y" }}</p>
+              <mat-form-field class="roam-field" appearance="outline">
+                <input
+                  matInput
+                  readonly
+                  [matDatepicker]="picker"
+                  placeholder="Select the date"
+                  [formControl]="date"
+                  (dateChange)="changeDate()"
+                />
+                <mat-datepicker
+                  #picker
+                  [calendarHeaderComponent]="calendarHeader"
+                >
+                  <mat-datepicker-actions>
+                    <button mat-button matDatepickerApply class="view-more">
+                      Apply
+                    </button>
+                  </mat-datepicker-actions>
+                </mat-datepicker>
+                <mat-datepicker-toggle matSuffix [for]="picker">
+                  <mat-icon matDatepickerToggleIcon>expand_more</mat-icon>
+                </mat-datepicker-toggle>
+              </mat-form-field>
+              <button mat-button class="roam-button" (click)="goToToday()">
+                Today
+              </button>
+            </div>
+            <div>
+              <button mat-button class="roam-button">
+                <div class="align-baseline gap-7">
+                  <span class="upcoming circle"></span>
+                  <span class="roam-text">Upcoming</span>
+                </div>
+                <div class="align-baseline gap-7">
+                  <span class="ckeck-in circle"></span>
+                  <span class="roam-text">Checking-in</span>
+                </div>
+                <div class="align-baseline gap-7">
+                  <span class="hosting circle"></span>
+                  <span class="roam-text">Hosting</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div class="p-relative" *ngIf="days.length">
+            <swiper [config]="config" class="swiper">
+              <ng-template swiperSlide *ngFor="let day of days">
+                <button mat-button
+                  class="swiper-item text-center roam-title"
+                  [class.primary-black]="isToday(day.date)"
+                  (click)="changeStartDay(day.date)"
+                >
+                  {{ day.shortName }}<br />{{ day.day }}
+                </button>
+              </ng-template>
+            </swiper>
+            <button
+              mat-button
+              class="swiper-button-next circle-icon"
+              (click)="goToNextDays()"
+              [disabled]="false"
+            ></button>
+            <button
+              mat-button
+              class="swiper-button-prev circle-icon"
+              (click)="goToPrevDays()"
+              [disabled]="false"
+            ></button>
+          </div>
+        </div>
+
+        <div class="gantt">
+          <div
+            class="gantt__row gantt__row--lines"
+            [ngStyle]="{
+              'grid-template-columns':
+                '100px repeat(' + numberOfDays + ', 1fr) 100px'
+            }"
+          >
+            <span *ngFor="let item of numberDaysCount"></span>
+            <span #spanEl></span>
+          </div>
+          <ng-container
+            *ngFor="
+              let property of properties;
+              let index = index;
+              let first = first
+            "
+          >
+            <div class="gantt__row" [class.border-top]="first">
+              <span></span>
+              <div class="gantt__row-percent"  [ngStyle]="{
+                'grid-template-columns': 'repeat(' + numberOfDays + ', 1fr)'
+              }">
+                <span *ngFor="let item of numberDaysCount" matTooltip="Occupancy Rate"
+                matTooltipClass="custom-tooltip" matTooltipPosition="above">55%</span>
+              </div>
+              <span></span>
+            </div>
+            <ng-container *ngIf="foundProperty(property.id)">
+              <div
+                class="gantt__row room-row"
+                *ngFor="let room of property.rooms; let last = last"
+                [class.last]="last"
+              >
+                <div class="gantt__row-first"></div>
+                <ul
+                  class="gantt__row-bars"
+                  [ngStyle]="{
+                    'grid-template-columns': 'repeat(' + numberOfDays + ', 1fr)'
+                  }"
+                >
+                  <ng-container
+                    *ngFor="
+                      let bookingDetail of room.bookingDetails;
+                      let roomIndex = index
+                    "
+                  >
+                    <li
+                      *ngIf="checkIfCurrentMonth(bookingDetail)"
+                      (click)="onToggleSideNav(bookingDetail, room)"
+                      class="align-center gap-5 gantt__row-bars--li"
+                      [ngClass]="{
+                        'next-row': getEndDay(bookingDetail) < 1,
+                        'prev-row': getStartDay(bookingDetail) < 1
+                      }"
+                      [ngStyle]="{
+                        'grid-column': computeGanttDays(bookingDetail),
+                        'background-color': getBgColor(bookingDetail),
+                        border: getBorderColor(bookingDetail),
+                        'margin-left': elementWidthMl,
+                        'margin-right': elementWidthMr
+                      }"
+                      (dragover)="onMouseEnterBooked(room.id)"
+                    >
+                      <img
+                        [src]="
+                          '/assets/svg/' +
+                          bookingDetail.booking.channel.iconUrl +
+                          '.svg'
+                        "
+                        alt="user-avatar"
+                        class="gantt__user-avatar"
+                      />
+                      <p class="gantt__roam-title roam-title">
+                        {{ bookingDetail.booking.user.name }}
+                      </p>
+                    </li>
+                  </ng-container>
+                </ul>
+                <ul
+                  class="gantt__row-bars--absolute"
+                  [ngStyle]="{
+                    'grid-template-columns': 'repeat(' + numberOfDays + ', 1fr)'
+                  }"
+                >
+                  <ng-container
+                    *ngFor="
+                      let reservation of bookingReservations[room.id];
+                      let rIndex = index
+                    "
+                  >
+                    <li
+                      draggable="true"
+                      *ngIf="reservation === EBookingReservationDay.Free"
+                      class="gantt__row-bars--value roam-title"
+                      [ngStyle]="{
+                        'grid-column': rIndex + 1
+                      }"
+                      (dragstart)="onDragStart($event, rIndex, room.id)"
+                      (drop)="onDrop(rIndex, room.id)"
+                      (dragenter)="onDragEnter($event)"
+                      (dragover)="onDragOver($event, rIndex, room.id)"
+                      (dragend)="onDragEnd($event)"
+                      >
+                      <div *ngIf="dropzonIsShown && selectedStartDate.index == rIndex && room.id === selectedStartDate.roomId" class="dropzone" [ngStyle]="{'width.%': dropzoneWidth}"></div>
+                      <img
+                        src="/assets/svg/rounded-plus.svg"
+                        alt="plus icon"
+                        [matMenuTriggerFor]="menu"
+                      />
+
+                      <mat-menu #menu="matMenu" class="radius-22">
+                        <button mat-menu-item>
+                          <span
+                            class="roam-text"
+                            (click)="openQuickReservation(rIndex)"
+                            >Quick Reservation</span
+                          >
+                        </button>
+                      </mat-menu>
+                      <span> {{ room.roomType.dailyPrice | currency : property.currency : 'symbol-narrow' : '1.0-0' }}</span>
+                    </li>
+                  </ng-container>
+                </ul>
+                <div class="gantt__row-last"></div>
+              </div>
+            </ng-container>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </mat-sidenav-content>
+
+  <mat-sidenav #sidenav mode="over" position="end" (opened)="onSidenavOpen()">
+    <ng-container *ngIf="showReservationDetails">
+      <app-reservation-sidenav
+        (closeSideNav)="onToggleSideNav(null, null)"
+        [details]="reservationDetails"
+        [isReservationDetails]="true"
+      ></app-reservation-sidenav>
+    </ng-container>
+
+    <ng-container *ngIf="showQuickReservation">
+      <app-quick-reservation [startDay]="startDay" [endDay]="endDay" (closeSideNav)="onToggleSideNav(null, null)"></app-quick-reservation>
+    </ng-container>
+  </mat-sidenav>
+</mat-sidenav-container>
